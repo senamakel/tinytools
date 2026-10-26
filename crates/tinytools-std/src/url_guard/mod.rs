@@ -58,6 +58,10 @@ pub fn is_safe_endpoint_for_bearer(endpoint: &str) -> bool {
             let Some(host) = url.host_str() else {
                 return false;
             };
+            let host = host
+                .strip_prefix('[')
+                .and_then(|host| host.strip_suffix(']'))
+                .unwrap_or(host);
             host == "localhost"
                 || host
                     .parse::<IpAddr>()
