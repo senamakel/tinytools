@@ -3,6 +3,29 @@
 
 use super::*;
 
+#[test]
+fn bearer_endpoints_allow_https_and_only_http_loopback() {
+    for endpoint in [
+        "https://api.example.test/v1",
+        "http://localhost:8080/v1",
+        "http://127.0.0.1:8080/v1",
+        "http://127.200.10.20:8080/v1",
+        "http://[::1]:8080/v1",
+    ] {
+        assert!(is_safe_endpoint_for_bearer(endpoint), "{endpoint}");
+    }
+
+    for endpoint in [
+        "http://192.168.1.10:8080/v1",
+        "http://localhost.example.test/v1",
+        "http://127.0.0.1.example.test/v1",
+        "ftp://localhost/v1",
+        "not a url",
+    ] {
+        assert!(!is_safe_endpoint_for_bearer(endpoint), "{endpoint}");
+    }
+}
+
 /// Turns an expected rejection into its message, and an unexpected success
 /// into a test failure, without `unwrap_err`.
 trait Rejection {
