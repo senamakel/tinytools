@@ -40,6 +40,37 @@
 use std::future::Future;
 use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
 
+/// Whether an HTTP endpoint can safely carry a bearer credential.
+///
+/// HTTPS endpoints are accepted. Plain HTTP is limited to the exact
+/// `localhost` hostname and parsed IP loopback addresses, where credentials
+/// stay on the local machine. Other schemes, malformed URLs, and cleartext
+/// network endpoints are rejected.
+#[must_use]
+pub fn is_safe_endpoint_for_bearer(endpoint: &str) -> bool {
+    let Ok(url) = reqwest::Url::parse(endpoint) else {
+        return false;
+    };
+
+    match url.scheme() {
+        "https" => true,
+        "http" => {
+            let Some(host) = url.host_str() else {
+                return false;
+            };
+            let host = host
+                .strip_prefix('[')
+                .and_then(|host| host.strip_suffix(']'))
+                .unwrap_or(host);
+            host == "localhost"
+                || host
+                    .parse::<IpAddr>()
+                    .is_ok_and(|address| address.is_loopback())
+        }
+        _ => false,
+    }
+}
+
 /// Validate a URL against the allowlist + SSRF rules. Returns the
 /// original URL on success.
 ///
@@ -506,4 +537,4 @@ pub fn is_non_global_v6(v6: std::net::Ipv6Addr) -> bool {
 
 #[cfg(test)]
 #[path = "mod_tests.rs"]
-mod test;
+mod tests;
